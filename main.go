@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -9,8 +13,12 @@ const (
 )
 
 type Node struct {
-	num_words int
-	children  []*Node
+	NumWords int
+	Children []*Node
+}
+
+type Trie struct {
+	Root *Node
 }
 
 func NewNode() *Node {
@@ -27,21 +35,22 @@ func CharAt(s string, i int) string {
 }
 
 func (n *Node) GetNode(char string) *Node {
-	return n.children[GetCharIndex(char)]
+	return n.Children[GetCharIndex(char)]
 }
 
 func (n *Node) SetNode(char string, node *Node) {
-	n.children[GetCharIndex(char)] = node
+	n.Children[GetCharIndex(char)] = node
 }
 
-func (n *Node) Insert(s string) {
-	node := n
+func (t *Trie) Insert(s string) {
+	node := t.Root
 	index := 0
 	length := len(s)
 
 	for index < length {
 		if newNode := node.GetNode(string(s[index])); newNode != nil {
 			node = newNode
+			node.NumWords++
 			index++
 		} else {
 			break
@@ -53,13 +62,75 @@ func (n *Node) Insert(s string) {
 		newNode := NewNode()
 		node.SetNode(val, newNode)
 		node = newNode
+		node.NumWords++
 		index++
 	}
 }
 
+func (t *Trie) Find(s string) (*Node, bool) {
+	node := t.Root
+
+	for _, char := range s {
+		n := node.GetNode(string(char))
+		if n != nil {
+			node = n
+		} else {
+			return nil, false
+		}
+	}
+
+	return node, true
+}
+
+// While technically a correct way to count the number of 'complete' words -- it isn't a representative
+// count of all words _added_ that a partial matches.
+
+// func (t *Trie) CountPartialMatches(s string) int {
+//   var count int
+//   if node, ok := t.Find(s); ok {
+//     count = node.NumWords
+//     count += node.ChildCounts()
+//   } else {
+//     return count
+//   }
+//   return count
+// }
+//
+// func (n *Node) ChildCounts() int {
+//   var count int
+//   for _, node := range(n.Children) {
+//     if node != nil {
+//       count += node.NumWords
+//       count += node.ChildCounts()
+//     }
+//   }
+//   return count
+// }
+
 func main() {
-	trie := NewNode()
-	fmt.Println(trie)
-	trie.Insert("animal")
-	fmt.Println(trie)
+	trie := &Trie{NewNode()}
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan() // let's see how many commands we have
+	n_cmds, _ := strconv.Atoi(scanner.Text())
+	commands := make([]string, n_cmds)
+
+	for i, _ := range commands {
+		scanner.Scan()
+		commands[i] = scanner.Text()
+	}
+
+	for _, cmd := range commands {
+		s := strings.Split(cmd, " ")
+		switch s[0] {
+		case "add":
+			trie.Insert(s[1])
+		case "find":
+			if node, ok := trie.Find(s[1]); ok {
+				fmt.Println(node.NumWords)
+			} else {
+				fmt.Println(0)
+			}
+		}
+	}
+
 }
